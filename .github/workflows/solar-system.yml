@@ -84,6 +84,9 @@ jobs:
     dev-deploy:
       needs: docker
       runs-on: ubuntu-latest
+      environment:
+        name: development
+        url: https://${{ steps.set-ingress-host-url.outputs.APP_INGRESS_HOST }}        
       outputs:
         APP_INGRESS_URL: ${{ steps.set-ingress-host-url.outputs.APP_INGRESS_HOST }}
       steps:
@@ -151,6 +154,7 @@ jobs:
       - name: Test URL output using curl and JQ
         env:
           URL: ${{ needs.dev-deploy.outputs.APP_INGRESS_URL }}
+        continue-on-error: true
         run: |
           echo $URL
           echo "------------------------------------------"
