@@ -8,7 +8,7 @@ on:
       - 'feature/*'
 env:
   MONGO_URI: mongodb+srv://supercluster.d83jj.mongodb.net/superData
-  MONGO_USERNAME: superuser
+  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
   MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
   
 jobs:
@@ -120,3 +120,16 @@ jobs:
 
       - name: Check manifest files
         run: cat kubernetes/development/*.yaml
+
+      - name: Create MongoDB secret
+        run: |
+          kubectl -n ${{ vars.NAMESPACE }} create secret generic mongo-db-creds \
+          --from-literal=MONGO_URI=${{ env.MONGO_URI }} \
+          --from-literal=MONGO_USERNAME=${{ vars.MONGO_USERNAME }} \
+          --from-literal=MONGU_PASSWORD=${{ secrets.MONGO_PASSWORD }} \
+          --save-config \
+          --dry-run=client \
+          -o yaml | kubectl apply -f -
+
+      - name: Deploy to dev environment
+        run: kubectl apply -f kubernetes/development
