@@ -82,7 +82,8 @@ jobs:
     dev-deploy:
       runs-on: ubuntu-latest
       needs: docker
-      environment: development
+      environment: 
+        name: development
       steps:
       - uses: actions/checkout@v4
       - name: Install kubectl CLI
