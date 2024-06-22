@@ -21,6 +21,11 @@ on:
     outputs:
       application-url:
         value: ${{ jobs.reuse-deploy.outputs.APP_INGRESS_URL}}    
+    secrets:
+      k8s-kubeconfig:
+        required: true
+      mongodb-password:
+        required: true
 
 jobs:
   reuse-deploy:
@@ -42,7 +47,7 @@ jobs:
       uses: azure/k8s-set-context@v4
       with:
         method: kubeconfig
-        kubeconfig: ${{ secrets.KUBECONFIG }}
+        kubeconfig: ${{ secrets.k8s-kubeconfig }}
         
     - name: Fetch kubernetes cluster details
       run: |
@@ -75,7 +80,7 @@ jobs:
         kubectl -n ${{ vars.NAMESPACE }} create secret generic mongo-db-creds \
         --from-literal=MONGO_URI=${{ env.MONGO_URI }} \
         --from-literal=MONGO_USERNAME=${{ vars.MONGO_USERNAME }} \
-        --from-literal=MONGU_PASSWORD=${{ secrets.MONGO_PASSWORD }} \
+        --from-literal=MONGU_PASSWORD=${{ secrets.mongodb-password }} \
         --save-config \
         --dry-run=client \
         -o yaml | kubectl apply -f -

@@ -85,6 +85,9 @@ jobs:
       if: contains(github.ref, 'feature/')
       needs: docker
       uses: ./.github/workflows/reusable-deployment.yml
+      secrets: 
+        k8s-kubeconfig: ${{ secrets.KUBECONFIG }}
+        mongodb-password: ${{ secrets.MONGO_PASSWORD }}
       with:
         environment: development
         k8s-manifest-dir: kubernetes/development
@@ -109,6 +112,9 @@ jobs:
       if: github.ref == 'refs/heads/main'
       needs: docker
       uses: ./.github/workflows/reusable-deployment.yml
+      secrets: 
+        k8s-kubeconfig: ${{ secrets.KUBECONFIG }}
+        mongodb-password: ${{ secrets.MONGO_PASSWORD }}
       with:
         environment: production
         k8s-manifest-dir: kubernetes/production
