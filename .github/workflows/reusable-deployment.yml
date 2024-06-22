@@ -20,7 +20,7 @@ on:
         type: string
     outputs:
       application-url:
-        value: ${{ jobs.reuse-deploy.outputs.APP_INGRESS_URL}}    
+        value: ${{ jobs.deploy.outputs.APP_INGRESS_URL}}    
     secrets:
       k8s-kubeconfig:
         required: true
@@ -28,7 +28,7 @@ on:
         required: true
 
 jobs:
-  reuse-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment }}
