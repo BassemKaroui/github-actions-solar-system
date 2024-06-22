@@ -57,7 +57,7 @@ jobs:
         
     - name: Save Nginx Ingress Controller IP as a Github environment variable
       run: >
-        echo "INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller 
+        echo "INGRESS_IP=$(kubectl -n ingress-nginx get services ingress-nginx-controller
         -o jsonpath="{.status.loadBalancer.ingress[0].ip}")" >> $GITHUB_ENV
     
     - name: Replace tokens in manifest files
@@ -78,7 +78,7 @@ jobs:
     - name: Create MongoDB secret
       run: |
         kubectl -n ${{ vars.NAMESPACE }} create secret generic mongo-db-creds \
-        --from-literal=MONGO_URI=${{ env.MONGO_URI }} \
+        --from-literal=MONGO_URI=${{ vars.MONGO_URI }} \
         --from-literal=MONGO_USERNAME=${{ vars.MONGO_USERNAME }} \
         --from-literal=MONGU_PASSWORD=${{ secrets.mongodb-password }} \
         --save-config \
@@ -91,5 +91,5 @@ jobs:
     - name: Set app ingress host URL
       id: set-ingress-host-url
       run: >
-        echo "APP_INGRESS_HOST=$(kubectl -n ${{ vars.NAMESPACE }} get ingress 
+        echo "APP_INGRESS_HOST=$(kubectl -n ${{ vars.NAMESPACE }} get ingress
         -o jsonpath="{.items[0].spec.tls[0].hosts[0]}")" >> $GITHUB_OUTPUT
