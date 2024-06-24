@@ -26,21 +26,26 @@ jobs:
         #   with:
         #     node-version: 20
 
-        - name: Cache NPM dependencies
-          uses: actions/cache@v3
+        - name: Composite action - Cache & Install NPM packages
+          uses: ./.github/custom_actions/npm_action
           with:
-            path: ~/.npm
-            key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}          
+            dependencies-path: ~/.npm
+
+        # - name: Cache NPM dependencies
+        #   uses: actions/cache@v3
+        #   with:
+        #     path: ~/.npm
+        #     key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}          
     
-        - name: Install Dependencies
-          run: npm install
+        # - name: Install Dependencies
+        #   run: npm install       
     
         - name: Unit Testing
           run: npm test
           
         - name: Archive Test Result
           if: always()
-          uses: actions/upload-artifact@v3
+          uses: actions/upload-artifact@v4
           with:
             name: Mocha-Test-Result
             path: test-results.xml
@@ -49,19 +54,47 @@ jobs:
       name: Code Coverage
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-node@v3
-          with:
-            node-version: 18
-        - run: npm install
-        - continue-on-error: true
-          run: npm run coverage
-        - uses: actions/upload-artifact@v3
-          with:
-            name: Code-Coverage-Result
-            path: coverage
-            retention-days: 5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Composite action - Cache & Install NPM packages
+        uses: ./.github/custom_actions/npm_action
+        with:
+          dependencies-path: ~/.npm
+      - continue-on-error: true
+        run: npm run coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Code-Coverage-Result
+          path: coverage
+          retention-days: 5
 
+    reports-s3:
+      needs: [unit-testing, code-coverage]
+      name: AWS S3 -Upload Reports
+      runs-on: ubuntu-latest
+      continue-on-error: true
+      steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports-${{ github.sha }}
+      - name: Check artifacts
+        run: ls -ltr reports-${{ github.sha }}/*
+      - name: Upload to AWS S3
+        run: echo 'Uploading to AWS S3 ...'
+        # uses: jakejarvis/s3-sync-action@master
+        # with:
+        #   args: --follow-symlinks --delete
+        # env:
+        #   AWS_S3_BUCKET: <some_uuid>-solar-system-reports-bucket
+        #   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        #   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        #   AWS_REGION: 'us-east-1'
+        #   SOURCE_DIR: reports-${{ github.sha }}
+        #   DEST_DIR: reports-${{ github.sha }}
+    
     docker:
       name: Containerization
       runs-on: ubuntu-latest
@@ -84,6 +117,7 @@ jobs:
     dev-deploy:
       if: contains(github.ref, 'feature/')
       needs: docker
+      name: Dev Deployment
       uses: ./.github/workflows/reusable-deployment.yml
       secrets: 
         k8s-kubeconfig: ${{ secrets.KUBECONFIG }}
@@ -96,21 +130,14 @@ jobs:
       if: contains(github.ref, 'feature/')
       name: Dev Integration Testing
       needs: dev-deploy
-      runs-on: ubuntu-latest
-      steps:
-      - name: Test URL output using curl and JQ
-        env:
-          URL: ${{ needs.dev-deploy.outputs.application-url }}
-        continue-on-error: true
-        timeout-minutes: 1
-        run: |
-          echo $URL
-          echo "------------------------------------------"
-          curl https://${URL}/live -s -k | jq -r ".status" | grep -i live
+      uses: ./.github/workflows/reusable-testing.yml
+      with:
+        ingress-url: ${{ needs.dev-deploy.outputs.application-url }}
           
     prod-deploy:
       if: github.ref == 'refs/heads/main'
       needs: docker
+      name: Prod Deployment
       uses: ./.github/workflows/reusable-deployment.yml
       secrets: 
         k8s-kubeconfig: ${{ secrets.KUBECONFIG }}
@@ -123,15 +150,7 @@ jobs:
       if: github.ref == 'refs/heads/main'
       name: Prod Integration Testing
       needs: prod-deploy
-      runs-on: ubuntu-latest
-      steps:
-      - name: Test URL output using curl and JQ
-        env:
-          URL: ${{ needs.prod-deploy.outputs.application-url }}
-        continue-on-error: true
-        timeout-minutes: 1
-        run: |
-          echo $URL
-          echo "------------------------------------------"
-          curl https://${URL}/live -s -k | jq -r ".status" | grep -i live
+      uses: ./.github/workflows/reusable-testing.yml
+      with:
+        ingress-url: ${{ needs.prod-deploy.outputs.application-url }}
 
